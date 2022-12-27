@@ -102,18 +102,35 @@ export function Worterbuch({
   return <WbContext.Provider value={wb}>{children}</WbContext.Provider>;
 }
 
-export function useGet<T>(): (key: Key, consumer: (value: T) => void) => void {
+export function useGet<T>(): (
+  keySegments: string[],
+  consumer: (value: T) => void
+) => void {
   const wb = React.useContext(WbContext);
-  return (key: Key, consumer: (value: T) => void) => {
+  return (keySegments: string[], consumer: (value: T) => void) => {
+    const key = keySegments.join(wb.separator);
     if (wb.connection) {
       wb.connection.get(key, consumer);
     }
   };
 }
 
-export function useSubscribe<T>(key: Key): T | undefined {
+export function useGetValue<T>(
+  ...keySegments: string[]
+): (consumer: (value: T) => void) => void {
+  const wb = React.useContext(WbContext);
+  const key = useTopic(keySegments);
+  return (consumer: (value: T) => void) => {
+    if (wb.connection) {
+      wb.connection.get(key, consumer);
+    }
+  };
+}
+
+export function useSubscribe<T>(...keySegments: string[]): T | undefined {
   const wb = React.useContext(WbContext);
   const [value, setValue] = React.useState<T | undefined>();
+  const key = useTopic(keySegments);
   React.useEffect(() => {
     if (wb.connection) {
       const sub = wb.connection.subscribe(key, setValue);
@@ -127,9 +144,13 @@ export function useSubscribe<T>(key: Key): T | undefined {
   return value;
 }
 
-export function useSubscribeWithInitValue<T>(key: Key, initialValue: T): T {
+export function useSubscribeWithInitValue<T>(
+  initialValue: T,
+  ...keySegments: string[]
+): T {
   const wb = React.useContext(WbContext);
   const [value, setValue] = React.useState<T>(initialValue);
+  const key = useTopic(keySegments);
   React.useEffect(() => {
     if (wb.connection) {
       const sub = wb.connection.subscribe(key, setValue);
@@ -143,8 +164,9 @@ export function useSubscribeWithInitValue<T>(key: Key, initialValue: T): T {
   return value;
 }
 
-export function usePSubscribe<T>(key: Key) {
+export function usePSubscribe<T>(...keySegments: string[]) {
   const wb = React.useContext(WbContext);
+  const key = useTopic(keySegments);
   const [values, update] = React.useReducer(
     (state: Map<Key, T>, kvps: KeyValuePairs) => {
       kvps.forEach((kvp) => {
@@ -167,7 +189,8 @@ export function usePSubscribe<T>(key: Key) {
   return values;
 }
 
-export function useSubKeys(pattern: RequestPattern) {
+export function useSubKeys(...patternSegemnts: string[]) {
+  const pattern = useTopic(patternSegemnts);
   const tree = useTree(pattern);
   const subKeys: string[][] = [];
   expand(tree, [], subKeys);
@@ -188,7 +211,8 @@ function expand(
   }
 }
 
-export function useTree(pattern: RequestPattern) {
+export function useTree(...patternSegemnts: string[]) {
+  const pattern = useTopic(patternSegemnts);
   const wb = React.useContext(WbContext);
 
   const [tree, update] = React.useReducer(
@@ -256,7 +280,7 @@ export function useMultiWildcard(): string {
   return wb.multiWildcard;
 }
 
-export function useTopic(...segemnts: string[]): string {
+export function useTopic(segemnts: string[]): string {
   return segemnts.join(useSeparator());
 }
 
@@ -276,5 +300,14 @@ export function useWorterbuchConnected() {
 
 export function useSet() {
   const wb = React.useContext(WbContext);
-  return (key: string, value: any) => wb.connection?.set(key, value);
+  return (keySegments: string[], value: any) => {
+    const key = keySegments.join(wb.separator);
+    return wb.connection?.set(key, value);
+  };
+}
+
+export function useSetValue(...keySegemnts: string[]) {
+  const wb = React.useContext(WbContext);
+  const key = useTopic(keySegemnts);
+  return (value: any) => wb.connection?.set(key, value);
 }
