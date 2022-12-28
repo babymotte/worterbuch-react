@@ -338,7 +338,7 @@ function updateProgress(
   window.requestAnimationFrame(() => {
     const progress = intermediateProgressRef.current;
     setProgress(progress);
-    if (progress[0] < progress[1]) {
+    if (progress[0] < 0 || progress[0] < progress[1]) {
       updateProgress(intermediateProgressRef, setProgress);
     }
   });
