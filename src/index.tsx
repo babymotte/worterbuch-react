@@ -6,7 +6,7 @@ import {
   Key,
   KeyValuePairs,
 } from "worterbuch-js";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 const wasm = wbinit();
 
@@ -312,18 +312,34 @@ export function useSetValue(...keySegemnts: string[]) {
   return (value: any) => wb.connection?.set(key, value);
 }
 
-export function usePresubscribe(
-  patternSegemnts: string[],
-  onsubscribed: () => void
-) {
+export function usePresubscribe(patternSegemnts: string[]) {
   const wb = React.useContext(WbContext);
   const pattern = useTopic(patternSegemnts);
 
+  const [progress, setProgress] = useState<[number, number]>([-1, -1]);
+  const intermediateProgressRef = useRef<[number, number]>([-1, -1]);
+
   useEffect(() => {
     console.log("Presubscribing to", pattern, "…");
-    wb.connection?.preSubscribe(pattern, () => {
-      console.log("Presubscription complete.");
-      onsubscribed();
+    wb.connection?.preSubscribe(pattern, (progress: [number, number]) => {
+      intermediateProgressRef.current = progress;
     });
-  }, [pattern, wb.connection, onsubscribed]);
+  }, [pattern, wb.connection]);
+
+  updateProgress(intermediateProgressRef, setProgress);
+
+  return progress;
+}
+
+function updateProgress(
+  intermediateProgressRef: React.MutableRefObject<[number, number]>,
+  setProgress: React.Dispatch<React.SetStateAction<[number, number]>>
+) {
+  window.requestAnimationFrame(() => {
+    const progress = intermediateProgressRef.current;
+    setProgress(progress);
+    if (progress[0] < progress[1]) {
+      updateProgress(intermediateProgressRef, setProgress);
+    }
+  });
 }
