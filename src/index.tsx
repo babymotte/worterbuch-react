@@ -6,7 +6,7 @@ import {
   Key,
   KeyValuePairs,
 } from "worterbuch-js";
-import React from "react";
+import React, { useEffect } from "react";
 
 const wasm = wbinit();
 
@@ -318,5 +318,12 @@ export function usePresubscribe(
 ) {
   const wb = React.useContext(WbContext);
   const pattern = useTopic(patternSegemnts);
-  wb.connection?.preSubscribe(pattern, onsubscribed);
+
+  useEffect(() => {
+    console.log("Presubscribing to", pattern, "…");
+    wb.connection?.preSubscribe(pattern, () => {
+      console.log("Presubscription complete.");
+      onsubscribed();
+    });
+  }, [pattern, wb.connection, onsubscribed]);
 }
