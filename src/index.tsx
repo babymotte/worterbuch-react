@@ -312,8 +312,11 @@ export function useSetValue(...keySegemnts: string[]) {
   return (value: any) => wb.connection?.set(key, value);
 }
 
-export function usePresubscribe(...patternSegemnts: string[]) {
+export function usePresubscribe(
+  patternSegemnts: string[],
+  onsubscribed: () => void
+) {
   const wb = React.useContext(WbContext);
   const pattern = useTopic(patternSegemnts);
-  wb.connection?.preSubscribe(pattern);
+  wb.connection?.preSubscribe(pattern, onsubscribed);
 }
