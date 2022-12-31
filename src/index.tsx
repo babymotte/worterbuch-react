@@ -312,21 +312,34 @@ export function useSetValue(...keySegemnts: string[]) {
   return (value: any) => wb.connection?.set(key, value);
 }
 
-export function usePresubscribe(patternSegemnts: string[]) {
+export function usePresubscribe(patternSegemnts: string[], delay?: number) {
   const wb = React.useContext(WbContext);
   const pattern = useTopic(patternSegemnts);
 
   const [progress, setProgress] = useState<[number, number]>([-1, -1]);
   const intermediateProgressRef = useRef<[number, number]>([-1, -1]);
 
-  useEffect(() => {
+  const doPresubscribe = () => {
     console.log("Presubscribing to", pattern, "…");
     wb.connection?.preSubscribe(pattern, (progress: [number, number]) => {
       intermediateProgressRef.current = progress;
     });
+  };
+
+  useEffect(() => {
+    if (!delay) {
+      console.log("no delay, subscribing immediately");
+
+      doPresubscribe();
+    } else {
+      console.log("delay, subscribing later");
+      setTimeout(doPresubscribe, delay);
+    }
   }, [pattern, wb.connection]);
 
-  updateProgress(intermediateProgressRef, setProgress);
+  useEffect(() => {
+    updateProgress(intermediateProgressRef, setProgress);
+  }, []);
 
   return progress;
 }
