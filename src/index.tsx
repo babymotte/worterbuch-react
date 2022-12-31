@@ -328,11 +328,8 @@ export function usePresubscribe(patternSegemnts: string[], delay?: number) {
 
   useEffect(() => {
     if (!delay) {
-      console.log("no delay, subscribing immediately");
-
       doPresubscribe();
     } else {
-      console.log("delay, subscribing later");
       setTimeout(doPresubscribe, delay);
     }
   }, [pattern, wb.connection]);
