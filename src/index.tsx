@@ -289,7 +289,7 @@ export function useCreateTopic() {
   return (...segemnts: string[]) => segemnts.join(separator);
 }
 
-export function useWorterbuchConnected() {
+export function useWorterbuchConnected(): [boolean, string | undefined] {
   const [connected, setConnected] = React.useState<boolean>(false);
   const wb = React.useContext(WbContext);
   React.useEffect(() => {
