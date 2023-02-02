@@ -1,5 +1,4 @@
 import {
-  wbinit,
   connect as wbconnect,
   Connection,
   RequestPattern,
@@ -8,14 +7,11 @@ import {
 } from "worterbuch-js";
 import React, { useEffect, useRef, useState } from "react";
 
-const wasm = wbinit();
-
 const WbContext = React.createContext<WB>({
   connection: undefined,
   separator: "/",
   wildcard: "?",
   multiWildcard: "#",
-  json: true,
   address: "ws://worterbuch.homelab/ws",
 });
 
@@ -24,7 +20,6 @@ type WB = {
   separator: string;
   wildcard: string;
   multiWildcard: string;
-  json: boolean;
   address: string | undefined;
 };
 
@@ -37,8 +32,7 @@ export type Config = {
 
 function useWorterbuch(
   address: string | undefined,
-  automaticReconnect: boolean,
-  json: boolean
+  automaticReconnect: boolean
 ): WB {
   const [conn, setConn] = React.useState<undefined | Connection>();
   const [separator, setSeparator] = React.useState<string>("/");
@@ -47,34 +41,31 @@ function useWorterbuch(
   const [attempt, setAttempt] = React.useState(0);
 
   React.useEffect(() => {
-    wasm.then(() => {
-      if (address && (attempt === 0 || automaticReconnect)) {
-        console.log("Connecting to worterbuch server at", address);
-        const conn = wbconnect(address, json);
-        conn.onclose = () => {
-          console.error("Connection to worterbuch closed.");
-          if (automaticReconnect) {
-            console.log(`Trying to reconnect in 3 seconds ...`);
-            setTimeout(() => setAttempt(attempt + 1), 3000);
-          }
-          setConn(undefined);
-        };
-        conn.onhandshake = (handshake) => {
-          setSeparator(handshake.separator);
-          setWildcard(handshake.wildcard);
-          setMultiWildcard(handshake.multiWildcard);
-          setConn(conn);
-        };
-      }
-    });
-  }, [address, attempt, automaticReconnect, json]);
+    if (address && (attempt === 0 || automaticReconnect)) {
+      console.log("Connecting to worterbuch server at", address);
+      const conn = wbconnect(address);
+      conn.onclose = () => {
+        console.error("Connection to worterbuch closed.");
+        if (automaticReconnect) {
+          console.log(`Trying to reconnect in 3 seconds ...`);
+          setTimeout(() => setAttempt(attempt + 1), 3000);
+        }
+        setConn(undefined);
+      };
+      conn.onhandshake = (handshake) => {
+        setSeparator(handshake.separator);
+        setWildcard(handshake.wildcard);
+        setMultiWildcard(handshake.multiWildcard);
+        setConn(conn);
+      };
+    }
+  }, [address, attempt, automaticReconnect]);
 
   return {
     connection: conn,
     separator,
     wildcard,
     multiWildcard,
-    json,
     address,
   };
 }
@@ -97,7 +88,7 @@ export function Worterbuch({
     ? `${config.backendScheme}://${config.backendHost}${port}${config.backendPath}`
     : undefined;
 
-  const wb = useWorterbuch(address, automaticReconnect || false, json);
+  const wb = useWorterbuch(address, automaticReconnect || false);
 
   return <WbContext.Provider value={wb}>{children}</WbContext.Provider>;
 }
