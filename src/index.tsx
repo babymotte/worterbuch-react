@@ -79,7 +79,6 @@ export type WorterbuchProps = {
 
 export function Worterbuch({
   children,
-  json,
   config,
   automaticReconnect,
 }: WorterbuchProps) {
