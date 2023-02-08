@@ -252,3 +252,17 @@ export function useSetValue(...keySegemnts: string[]) {
   const key = useTopic(keySegemnts);
   return (value: any) => wb.connection?.set(key, value);
 }
+
+export function usePublish() {
+  const wb = React.useContext(WbContext);
+  return (keySegments: string[], value: any) => {
+    const key = keySegments.join(wb.separator);
+    return wb.connection?.publish(key, value);
+  };
+}
+
+export function usePublishValue(...keySegemnts: string[]) {
+  const wb = React.useContext(WbContext);
+  const key = useTopic(keySegemnts);
+  return (value: any) => wb.connection?.set(key, value);
+}
