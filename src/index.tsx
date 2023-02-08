@@ -94,25 +94,57 @@ export function Worterbuch({
 
 export function useGet<T>(): (
   keySegments: string[],
-  consumer: (value: T) => void
+  consumer: (value: T | undefined, deleted?: T) => void
 ) => void {
   const wb = React.useContext(WbContext);
-  return (keySegments: string[], consumer: (value: T) => void) => {
+  return (
+    keySegments: string[],
+    consumer: (value: T | undefined, deleted?: T) => void
+  ) => {
     const key = keySegments.join(wb.separator);
     if (wb.connection) {
-      wb.connection.get(key, consumer);
+      wb.connection.get(key, (e) => consumer(e.value, e.deleted));
+    }
+  };
+}
+
+export function useDelete<T>(): (
+  keySegments: string[],
+  consumer?: (value: T | undefined) => void
+) => void {
+  const wb = React.useContext(WbContext);
+  return (keySegments: string[], consumer?: (value: T | undefined) => void) => {
+    const key = keySegments.join(wb.separator);
+    if (wb.connection) {
+      wb.connection.del(key, (e) => {
+        if (consumer) {
+          consumer(e.deleted);
+        }
+      });
     }
   };
 }
 
 export function useGetValue<T>(
   ...keySegments: string[]
-): (consumer: (value: T) => void) => void {
+): (consumer: (value: T | undefined, deleted?: T) => void) => void {
   const wb = React.useContext(WbContext);
   const key = useTopic(keySegments);
-  return (consumer: (value: T) => void) => {
+  return (consumer: (value: T | undefined, deleted?: T) => void) => {
     if (wb.connection) {
-      wb.connection.get(key, consumer);
+      wb.connection.get(key, (e) => consumer(e.value, e.deleted));
+    }
+  };
+}
+
+export function useDeleteKey<T>(
+  ...keySegments: string[]
+): (consumer: (value: T | undefined, deleted?: T) => void) => void {
+  const wb = React.useContext(WbContext);
+  const key = useTopic(keySegments);
+  return (consumer: (value: T | undefined, deleted?: T) => void) => {
+    if (wb.connection) {
+      wb.connection.del(key, (e) => consumer(e.value, e.deleted));
     }
   };
 }
@@ -123,7 +155,7 @@ export function useSubscribe<T>(...keySegments: string[]): T | undefined {
   const key = useTopic(keySegments);
   React.useEffect(() => {
     if (wb.connection) {
-      const sub = wb.connection.subscribe(key, setValue);
+      const sub = wb.connection.subscribe(key, (e) => setValue(e.value));
       return () => {
         if (wb.connection) {
           wb.connection.unsubscribe(sub);
@@ -143,7 +175,7 @@ export function useSubscribeWithInitValue<T>(
   const key = useTopic(keySegments);
   React.useEffect(() => {
     if (wb.connection) {
-      const sub = wb.connection.subscribe(key, setValue);
+      const sub = wb.connection.subscribe(key, (e) => setValue(e.value));
       return () => {
         if (wb.connection) {
           wb.connection.unsubscribe(sub);
@@ -158,10 +190,20 @@ export function usePSubscribe<T>(...keySegments: string[]) {
   const wb = React.useContext(WbContext);
   const key = useTopic(keySegments);
   const [values, update] = React.useReducer(
-    (state: Map<Key, T>, kvps: KeyValuePairs) => {
-      kvps.forEach((kvp) => {
-        state.set(kvp.key, kvp.value);
-      });
+    (
+      state: Map<Key, T>,
+      event: { keyValuePairs?: KeyValuePairs; deleted?: KeyValuePairs }
+    ) => {
+      if (event.keyValuePairs) {
+        event.keyValuePairs.forEach((kvp) => {
+          state.set(kvp.key, kvp.value);
+        });
+      }
+      if (event.deleted) {
+        event.deleted.forEach((kvp) => {
+          state.delete(kvp.key);
+        });
+      }
       return new Map(state);
     },
     new Map()
@@ -179,103 +221,12 @@ export function usePSubscribe<T>(...keySegments: string[]) {
   return values;
 }
 
-export function useSubKeys(...patternSegemnts: string[]) {
-  const pattern = useTopic(patternSegemnts);
-  const tree = useTree(pattern);
-  const subKeys: string[][] = [];
-  expand(tree, [], subKeys);
-  return subKeys;
-}
-
-function expand(
-  subtree: Map<string, Map<string, any>>,
-  path: string[],
-  paths: string[][]
-) {
-  if (subtree.size === 0) {
-    paths.push(path);
-  } else {
-    subtree.forEach((childTree, segment) =>
-      expand(childTree, [...path, segment], paths)
-    );
-  }
-}
-
-export function useTree(...patternSegemnts: string[]) {
-  const pattern = useTopic(patternSegemnts);
-  const wb = React.useContext(WbContext);
-
-  const [tree, update] = React.useReducer(
-    (state: Map<Key, any>, kvps: KeyValuePairs) => {
-      let changed = false;
-      kvps.forEach((kvp) => {
-        const split = kvp.key.split(wb.separator);
-        const head = split.shift();
-        if (head) {
-          changed = merge(head, split, state) || changed;
-        }
-      });
-      if (changed) {
-        return new Map(state);
-      } else {
-        return state;
-      }
-    },
-    new Map()
-  );
-
-  React.useEffect(() => {
-    if (wb.connection) {
-      const sub = wb.connection.pSubscribe(pattern, update);
-      return () => {
-        if (wb.connection) {
-          wb.connection.unsubscribe(sub);
-        }
-      };
-    }
-  }, [pattern, wb.connection, wb.separator]);
-
-  return tree;
-}
-
-function merge(key: string, tail: string[], map: Map<string, any>): boolean {
-  let changed = false;
-  let child = map.get(key);
-  if (!child) {
-    changed = true;
-    child = new Map();
-    map.set(key, child);
-  }
-
-  const head = tail.shift();
-  if (head) {
-    changed = merge(head, tail, child) || changed;
-  }
-
-  return changed;
-}
-
-export function useSeparator(): string {
-  const wb = React.useContext(WbContext);
-  return wb.separator;
-}
-
-export function useWildcard(): string {
-  const wb = React.useContext(WbContext);
-  return wb.wildcard;
-}
-
-export function useMultiWildcard(): string {
-  const wb = React.useContext(WbContext);
-  return wb.multiWildcard;
-}
-
 export function useTopic(segemnts: string[]): string {
-  return segemnts.join(useSeparator());
+  return segemnts.join("/");
 }
 
 export function useCreateTopic() {
-  const separator = useSeparator();
+  const separator = "/";
   return (...segemnts: string[]) => segemnts.join(separator);
 }
 
@@ -300,46 +251,4 @@ export function useSetValue(...keySegemnts: string[]) {
   const wb = React.useContext(WbContext);
   const key = useTopic(keySegemnts);
   return (value: any) => wb.connection?.set(key, value);
-}
-
-export function usePresubscribe(patternSegemnts: string[], delay?: number) {
-  const wb = React.useContext(WbContext);
-  const pattern = useTopic(patternSegemnts);
-
-  const [progress, setProgress] = useState<[number, number]>([-1, -1]);
-  const intermediateProgressRef = useRef<[number, number]>([-1, -1]);
-
-  const doPresubscribe = () => {
-    console.log("Presubscribing to", pattern, "…");
-    wb.connection?.preSubscribe(pattern, (progress: [number, number]) => {
-      intermediateProgressRef.current = progress;
-    });
-  };
-
-  useEffect(() => {
-    if (!delay) {
-      doPresubscribe();
-    } else {
-      setTimeout(doPresubscribe, delay);
-    }
-  }, [pattern, wb.connection]);
-
-  useEffect(() => {
-    updateProgress(intermediateProgressRef, setProgress);
-  }, []);
-
-  return progress;
-}
-
-function updateProgress(
-  intermediateProgressRef: React.MutableRefObject<[number, number]>,
-  setProgress: React.Dispatch<React.SetStateAction<[number, number]>>
-) {
-  window.requestAnimationFrame(() => {
-    const progress = intermediateProgressRef.current;
-    setProgress(progress);
-    if (progress[0] < 0 || progress[0] < progress[1]) {
-      updateProgress(intermediateProgressRef, setProgress);
-    }
-  });
 }
