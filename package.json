@@ -1,6 +1,6 @@
 {
   "name": "worterbuch-react",
-  "version": "0.32.1",
+  "version": "0.32.2",
   "description": "A worterbuch client library for React",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

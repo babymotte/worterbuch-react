@@ -264,5 +264,5 @@ export function usePublish() {
 export function usePublishValue(...keySegemnts: string[]) {
   const wb = React.useContext(WbContext);
   const key = useTopic(keySegemnts);
-  return (value: any) => wb.connection?.set(key, value);
+  return (value: any) => wb.connection?.publish(key, value);
 }
