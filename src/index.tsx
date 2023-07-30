@@ -9,7 +9,7 @@ import React, { useEffect, useRef, useState } from "react";
 
 const WbContext = React.createContext<WB>({
   connection: undefined,
-  address: "ws://worterbuch.homelab/ws",
+  address: undefined,
 });
 
 type WB = {
@@ -32,22 +32,34 @@ function useWorterbuch(
   const [attempt, setAttempt] = React.useState(0);
 
   React.useEffect(() => {
-    if (address && (attempt === 0 || automaticReconnect)) {
+    if (!conn && address && (attempt === 0 || automaticReconnect)) {
       console.log("Connecting to worterbuch server at", address);
-      const conn = wbconnect(address);
-      conn.onclose = () => {
-        console.error("Connection to worterbuch closed.");
-        if (automaticReconnect) {
-          console.log(`Trying to reconnect in 3 seconds ...`);
-          setTimeout(() => setAttempt(attempt + 1), 3000);
-        }
-        setConn(undefined);
-      };
-      conn.onhandshake = (handshake) => {
-        setConn(conn);
-      };
+      wbconnect(address)
+        .then((conn) => {
+          conn.onclose = () => {
+            console.error("Connection to worterbuch closed.");
+            setConn(undefined);
+            attemptReconnect(automaticReconnect, setAttempt);
+          };
+          console.log("connected now, updating connection");
+          setConn(conn);
+        })
+        .catch((e) => {
+          console.error("Could not connect to server:", e);
+          attemptReconnect(automaticReconnect, setAttempt);
+        });
     }
   }, [address, attempt, automaticReconnect]);
+
+  function attemptReconnect(
+    automaticReconnect: boolean,
+    setAttempt: (attempt: number) => void
+  ) {
+    if (automaticReconnect) {
+      console.log("Trying to reconnect in 3 seconds ...");
+      setTimeout(() => setAttempt(attempt + 1), 3000);
+    }
+  }
 
   return {
     connection: conn,
@@ -59,7 +71,6 @@ export type WorterbuchProps = {
   children: any;
   config: Config;
   automaticReconnect?: boolean;
-  json: boolean;
 };
 
 export function Worterbuch({
@@ -146,6 +157,8 @@ export function useSubscribe<T>(...keySegments: string[]): T | undefined {
           wb.connection.unsubscribe(sub);
         }
       };
+    } else {
+      setValue(undefined);
     }
   }, [key, wb.connection]);
   return value;
@@ -166,6 +179,8 @@ export function useSubscribeWithInitValue<T>(
           wb.connection.unsubscribe(sub);
         }
       };
+    } else {
+      setValue(initialValue);
     }
   }, [key, wb.connection]);
   return value;
