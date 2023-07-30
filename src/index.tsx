@@ -4,6 +4,7 @@ import {
   RequestPattern,
   Key,
   KeyValuePairs,
+  Children,
 } from "worterbuch-js";
 import React, { useEffect, useRef, useState } from "react";
 
@@ -265,4 +266,31 @@ export function usePublishValue(...keySegemnts: string[]) {
   const wb = React.useContext(WbContext);
   const key = useTopic(keySegemnts);
   return (value: any) => wb.connection?.publish(key, value);
+}
+
+export function useLs() {
+  const wb = React.useContext(WbContext);
+  return (parentSegments: string[]) => {
+    const parent = parentSegments.join(wb.separator);
+    return wb.connection?.ls(parent);
+  };
+}
+
+export function useSubscribeLs(...parentSegments: string[]): Children {
+  const wb = React.useContext(WbContext);
+  const [children, setChildren] = React.useState<Children>([]);
+  const parent = useTopic(parentSegments);
+  React.useEffect(() => {
+    if (wb.connection) {
+      const sub = wb.connection.subscribeLs(parent, (e) =>
+        setChildren(e.children)
+      );
+      return () => {
+        if (wb.connection) {
+          wb.connection.unsubscribeLs(sub);
+        }
+      };
+    }
+  }, [parent, wb.connection]);
+  return children;
 }
