@@ -41,7 +41,6 @@ function useWorterbuch(
             setConn(undefined);
             attemptReconnect(automaticReconnect, setAttempt);
           };
-          console.log("connected now, updating connection");
           setConn(conn);
         })
         .catch((e) => {
