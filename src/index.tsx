@@ -1,7 +1,6 @@
 import {
   connect as wbconnect,
   Connection,
-  RequestPattern,
   Key,
   KeyValuePairs,
   Children,
@@ -10,17 +9,11 @@ import React, { useEffect, useRef, useState } from "react";
 
 const WbContext = React.createContext<WB>({
   connection: undefined,
-  separator: "/",
-  wildcard: "?",
-  multiWildcard: "#",
   address: "ws://worterbuch.homelab/ws",
 });
 
 type WB = {
   connection: Connection | undefined;
-  separator: string;
-  wildcard: string;
-  multiWildcard: string;
   address: string | undefined;
 };
 
@@ -36,9 +29,6 @@ function useWorterbuch(
   automaticReconnect: boolean
 ): WB {
   const [conn, setConn] = React.useState<undefined | Connection>();
-  const [separator, setSeparator] = React.useState<string>("/");
-  const [wildcard, setWildcard] = React.useState<string>("?");
-  const [multiWildcard, setMultiWildcard] = React.useState<string>("#");
   const [attempt, setAttempt] = React.useState(0);
 
   React.useEffect(() => {
@@ -54,9 +44,6 @@ function useWorterbuch(
         setConn(undefined);
       };
       conn.onhandshake = (handshake) => {
-        setSeparator(handshake.separator);
-        setWildcard(handshake.wildcard);
-        setMultiWildcard(handshake.multiWildcard);
         setConn(conn);
       };
     }
@@ -64,9 +51,6 @@ function useWorterbuch(
 
   return {
     connection: conn,
-    separator,
-    wildcard,
-    multiWildcard,
     address,
   };
 }
@@ -102,7 +86,7 @@ export function useGet<T>(): (
     keySegments: string[],
     consumer: (value: T | undefined, deleted?: T) => void
   ) => {
-    const key = keySegments.join(wb.separator);
+    const key = keySegments.join("/");
     if (wb.connection) {
       wb.connection.get(key, (e) => consumer(e.value, e.deleted));
     }
@@ -115,7 +99,7 @@ export function useDelete<T>(): (
 ) => void {
   const wb = React.useContext(WbContext);
   return (keySegments: string[], consumer?: (value: T | undefined) => void) => {
-    const key = keySegments.join(wb.separator);
+    const key = keySegments.join("/");
     if (wb.connection) {
       wb.connection.del(key, (e) => {
         if (consumer) {
@@ -227,8 +211,7 @@ export function useTopic(segemnts: string[]): string {
 }
 
 export function useCreateTopic() {
-  const separator = "/";
-  return (...segemnts: string[]) => segemnts.join(separator);
+  return (...segemnts: string[]) => segemnts.join("/");
 }
 
 export function useWorterbuchConnected(): [boolean, string | undefined] {
@@ -243,7 +226,7 @@ export function useWorterbuchConnected(): [boolean, string | undefined] {
 export function useSet() {
   const wb = React.useContext(WbContext);
   return (keySegments: string[], value: any) => {
-    const key = keySegments.join(wb.separator);
+    const key = keySegments.join("/");
     return wb.connection?.set(key, value);
   };
 }
@@ -257,7 +240,7 @@ export function useSetValue(...keySegemnts: string[]) {
 export function usePublish() {
   const wb = React.useContext(WbContext);
   return (keySegments: string[], value: any) => {
-    const key = keySegments.join(wb.separator);
+    const key = keySegments.join("/");
     return wb.connection?.publish(key, value);
   };
 }
@@ -271,7 +254,7 @@ export function usePublishValue(...keySegemnts: string[]) {
 export function useLs() {
   const wb = React.useContext(WbContext);
   return (parentSegments: string[]) => {
-    const parent = parentSegments.join(wb.separator);
+    const parent = parentSegments.join("/");
     return wb.connection?.ls(parent);
   };
 }
