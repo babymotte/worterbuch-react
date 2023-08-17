@@ -1,9 +1,10 @@
 import {
   connect as wbconnect,
-  Connection,
+  Worterbuch,
   Key,
   KeyValuePairs,
   Children,
+  Value,
 } from "worterbuch-js";
 import React, { useEffect, useRef, useState } from "react";
 
@@ -13,7 +14,7 @@ const WbContext = React.createContext<WB>({
 });
 
 type WB = {
-  connection: Connection | undefined;
+  connection: Worterbuch | undefined;
   address: string | undefined;
 };
 
@@ -28,7 +29,7 @@ function useWorterbuch(
   address: string | undefined,
   automaticReconnect: boolean
 ): WB {
-  const [conn, setConn] = React.useState<undefined | Connection>();
+  const [conn, setConn] = React.useState<undefined | Worterbuch>();
   const [attempt, setAttempt] = React.useState(0);
 
   React.useEffect(() => {
@@ -87,107 +88,80 @@ export function Worterbuch({
   return <WbContext.Provider value={wb}>{children}</WbContext.Provider>;
 }
 
-export function useGet<T>(): (
-  keySegments: string[],
-  consumer: (value: T | undefined, deleted?: T) => void
+export function useGetLater(): (
+  key: string,
+  consumer: (value: Value | null) => void
 ) => void {
   const wb = React.useContext(WbContext);
-  return (
-    keySegments: string[],
-    consumer: (value: T | undefined, deleted?: T) => void
-  ) => {
-    const key = keySegments.join("/");
+  return (key: string, consumer: (value: Value | null) => void) => {
     if (wb.connection) {
-      wb.connection.get(key, (e) => consumer(e.value, e.deleted));
+      wb.connection.getAsync(key, consumer);
     }
   };
 }
 
-export function useDelete<T>(): (
-  keySegments: string[],
-  consumer?: (value: T | undefined) => void
+export function useGet<T>(
+  key: string
+): (consumer: (value: T | null) => void) => void {
+  const wb = React.useContext(WbContext);
+  return (consumer: (value: T | null) => void) => {
+    if (wb.connection) {
+      wb.connection.getAsync(key, (val) => consumer(val as T));
+    }
+  };
+}
+
+export function useDeleteLater(): (
+  key: string,
+  consumer?: (value: Value | null) => void
 ) => void {
   const wb = React.useContext(WbContext);
-  return (keySegments: string[], consumer?: (value: T | undefined) => void) => {
-    const key = keySegments.join("/");
+  return (key: string, consumer?: (value: Value | null) => void) => {
     if (wb.connection) {
-      wb.connection.del(key, (e) => {
-        if (consumer) {
-          consumer(e.deleted);
+      wb.connection.deleteAsync(key, consumer);
+    }
+  };
+}
+
+export function useDelete<T>(
+  key: string
+): (consumer: (value: T | null) => void) => void {
+  const wb = React.useContext(WbContext);
+  return (consumer: (value: T | null) => void) => {
+    if (wb.connection) {
+      wb.connection.deleteAsync(key, (val) => consumer(val as T));
+    }
+  };
+}
+
+export function useSubscribe<T>(key: string, initialValue?: T): T | null {
+  const wb = React.useContext(WbContext);
+  const [value, setValue] = React.useState<T | null>(
+    initialValue === undefined ? null : initialValue
+  );
+  React.useEffect(() => {
+    if (wb.connection) {
+      const sub = wb.connection.subscribe(key, ({ value }) => {
+        if (value !== undefined) {
+          setValue(value as T);
+        } else {
+          setValue(null);
         }
       });
-    }
-  };
-}
-
-export function useGetValue<T>(
-  ...keySegments: string[]
-): (consumer: (value: T | undefined, deleted?: T) => void) => void {
-  const wb = React.useContext(WbContext);
-  const key = useTopic(keySegments);
-  return (consumer: (value: T | undefined, deleted?: T) => void) => {
-    if (wb.connection) {
-      wb.connection.get(key, (e) => consumer(e.value, e.deleted));
-    }
-  };
-}
-
-export function useDeleteKey<T>(
-  ...keySegments: string[]
-): (consumer: (value: T | undefined, deleted?: T) => void) => void {
-  const wb = React.useContext(WbContext);
-  const key = useTopic(keySegments);
-  return (consumer: (value: T | undefined, deleted?: T) => void) => {
-    if (wb.connection) {
-      wb.connection.del(key, (e) => consumer(e.value, e.deleted));
-    }
-  };
-}
-
-export function useSubscribe<T>(...keySegments: string[]): T | undefined {
-  const wb = React.useContext(WbContext);
-  const [value, setValue] = React.useState<T | undefined>();
-  const key = useTopic(keySegments);
-  React.useEffect(() => {
-    if (wb.connection) {
-      const sub = wb.connection.subscribe(key, (e) => setValue(e.value));
       return () => {
         if (wb.connection) {
           wb.connection.unsubscribe(sub);
         }
       };
     } else {
-      setValue(undefined);
+      setValue(null);
     }
   }, [key, wb.connection]);
   return value;
 }
 
-export function useSubscribeWithInitValue<T>(
-  initialValue: T,
-  ...keySegments: string[]
-): T {
+export function usePSubscribe<T>(key: string) {
   const wb = React.useContext(WbContext);
-  const [value, setValue] = React.useState<T>(initialValue);
-  const key = useTopic(keySegments);
-  React.useEffect(() => {
-    if (wb.connection) {
-      const sub = wb.connection.subscribe(key, (e) => setValue(e.value));
-      return () => {
-        if (wb.connection) {
-          wb.connection.unsubscribe(sub);
-        }
-      };
-    } else {
-      setValue(initialValue);
-    }
-  }, [key, wb.connection]);
-  return value;
-}
-
-export function usePSubscribe<T>(...keySegments: string[]) {
-  const wb = React.useContext(WbContext);
-  const key = useTopic(keySegments);
   const [values, update] = React.useReducer(
     (
       state: Map<Key, T>,
@@ -195,7 +169,7 @@ export function usePSubscribe<T>(...keySegments: string[]) {
     ) => {
       if (event.keyValuePairs) {
         event.keyValuePairs.forEach((kvp) => {
-          state.set(kvp.key, kvp.value);
+          state.set(kvp.key, kvp.value as T);
         });
       }
       if (event.deleted) {
@@ -220,12 +194,8 @@ export function usePSubscribe<T>(...keySegments: string[]) {
   return values;
 }
 
-export function useTopic(segemnts: string[]): string {
+export function key(...segemnts: string[]): string {
   return segemnts.join("/");
-}
-
-export function useCreateTopic() {
-  return (...segemnts: string[]) => segemnts.join("/");
 }
 
 export function useWorterbuchConnected(): [boolean, string | undefined] {
@@ -237,51 +207,59 @@ export function useWorterbuchConnected(): [boolean, string | undefined] {
   return [connected, wb.address];
 }
 
-export function useSet() {
+export function useSetLater() {
   const wb = React.useContext(WbContext);
-  return (keySegments: string[], value: any) => {
-    const key = keySegments.join("/");
+  return (key: string, value: Value) => {
     return wb.connection?.set(key, value);
   };
 }
 
-export function useSetValue(...keySegemnts: string[]) {
+export function useSet(key: string) {
   const wb = React.useContext(WbContext);
-  const key = useTopic(keySegemnts);
-  return (value: any) => wb.connection?.set(key, value);
+  return (value: Value) => wb.connection?.set(key, value);
 }
 
-export function usePublish() {
+export function usePublishLater() {
   const wb = React.useContext(WbContext);
-  return (keySegments: string[], value: any) => {
-    const key = keySegments.join("/");
+  return (key: string, value: Value) => {
     return wb.connection?.publish(key, value);
   };
 }
 
-export function usePublishValue(...keySegemnts: string[]) {
+export function usePublish(key: string) {
   const wb = React.useContext(WbContext);
-  const key = useTopic(keySegemnts);
-  return (value: any) => wb.connection?.publish(key, value);
+  return (value: Value) => wb.connection?.publish(key, value);
 }
 
-export function useLs() {
+export function useLsLater(): (
+  parent: string,
+  consumer: (children: Children) => void
+) => void {
   const wb = React.useContext(WbContext);
-  return (parentSegments: string[]) => {
-    const parent = parentSegments.join("/");
-    return wb.connection?.ls(parent);
+  return (parent: string, consumer: (children: Children) => void) => {
+    if (wb.connection) {
+      wb.connection.lsAsync(parent, consumer);
+    }
   };
 }
 
-export function useSubscribeLs(...parentSegments: string[]): Children {
+export function useLs(
+  parent: string
+): (consumer: (children: Children) => void) => void {
+  const wb = React.useContext(WbContext);
+  return (consumer: (children: Children) => void) => {
+    if (wb.connection) {
+      wb.connection.lsAsync(parent, consumer);
+    }
+  };
+}
+
+export function useSubscribeLs(parent: string): Children {
   const wb = React.useContext(WbContext);
   const [children, setChildren] = React.useState<Children>([]);
-  const parent = useTopic(parentSegments);
   React.useEffect(() => {
     if (wb.connection) {
-      const sub = wb.connection.subscribeLs(parent, (e) =>
-        setChildren(e.children)
-      );
+      const sub = wb.connection.subscribeLs(parent, setChildren);
       return () => {
         if (wb.connection) {
           wb.connection.unsubscribeLs(sub);
