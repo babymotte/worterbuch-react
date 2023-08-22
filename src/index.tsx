@@ -134,6 +134,24 @@ export function useDelete<T>(
   };
 }
 
+export function usePDeleteLater(): (key: string) => void {
+  const wb = React.useContext(WbContext);
+  return (key: string) => {
+    if (wb.connection) {
+      wb.connection.pDeleteAsync(key);
+    }
+  };
+}
+
+export function usePDelete<T>(key: string): () => void {
+  const wb = React.useContext(WbContext);
+  return () => {
+    if (wb.connection) {
+      wb.connection.pDeleteAsync(key);
+    }
+  };
+}
+
 export function useSubscribe<T>(key: string, initialValue?: T): T | null {
   const wb = React.useContext(WbContext);
   const [value, setValue] = React.useState<T | null>(
@@ -232,11 +250,14 @@ export function usePublish(key: string) {
 }
 
 export function useLsLater(): (
-  parent: string,
+  parent: string | undefined,
   consumer: (children: Children) => void
 ) => void {
   const wb = React.useContext(WbContext);
-  return (parent: string, consumer: (children: Children) => void) => {
+  return (
+    parent: string | undefined,
+    consumer: (children: Children) => void
+  ) => {
     if (wb.connection) {
       wb.connection.lsAsync(parent, consumer);
     }
@@ -244,7 +265,7 @@ export function useLsLater(): (
 }
 
 export function useLs(
-  parent: string
+  parent: string | undefined
 ): (consumer: (children: Children) => void) => void {
   const wb = React.useContext(WbContext);
   return (consumer: (children: Children) => void) => {
@@ -254,7 +275,7 @@ export function useLs(
   };
 }
 
-export function useSubscribeLs(parent: string): Children {
+export function useSubscribeLs(parent: string | undefined): Children {
   const wb = React.useContext(WbContext);
   const [children, setChildren] = React.useState<Children>([]);
   React.useEffect(() => {
