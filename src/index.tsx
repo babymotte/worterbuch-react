@@ -23,7 +23,7 @@ export type Config = {
   backendHost: string;
   backendPort: number | undefined;
   backendPath: string;
-  authtoken: string | undefined;
+  backendAuthToken: string | undefined;
 };
 
 function useWorterbuch(
@@ -84,7 +84,7 @@ export function Worterbuch({
   const address = config
     ? `${config.backendScheme}://${config.backendHost}${port}${config.backendPath}`
     : undefined;
-  const authToken = config.authtoken;
+  const authToken = config.backendAuthToken;
 
   const wb = useWorterbuch(address, automaticReconnect || false, authToken);
 
