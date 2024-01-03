@@ -98,7 +98,7 @@ export function useGetLater(): (
   const wb = React.useContext(WbContext);
   return (key: string, consumer: (value: Value | null) => void) => {
     if (wb.connection) {
-      wb.connection.getAsync(key, consumer);
+      wb.connection.get(key).then(consumer);
     }
   };
 }
@@ -109,7 +109,7 @@ export function useGet<T>(
   const wb = React.useContext(WbContext);
   return (consumer: (value: T | null) => void) => {
     if (wb.connection) {
-      wb.connection.getAsync(key, (val) => consumer(val as T));
+      wb.connection.get(key).then((val) => consumer(val as T));
     }
   };
 }
@@ -121,7 +121,7 @@ export function useDeleteLater(): (
   const wb = React.useContext(WbContext);
   return (key: string, consumer?: (value: Value | null) => void) => {
     if (wb.connection) {
-      wb.connection.deleteAsync(key, consumer);
+      wb.connection.delete(key).then(consumer);
     }
   };
 }
@@ -132,7 +132,7 @@ export function useDelete<T>(
   const wb = React.useContext(WbContext);
   return (consumer: (value: T | null) => void) => {
     if (wb.connection) {
-      wb.connection.deleteAsync(key, (val) => consumer(val as T));
+      wb.connection.delete(key).then((val) => consumer(val as T));
     }
   };
 }
@@ -141,7 +141,7 @@ export function usePDeleteLater(): (key: string) => void {
   const wb = React.useContext(WbContext);
   return (key: string) => {
     if (wb.connection) {
-      wb.connection.pDeleteAsync(key);
+      wb.connection.pDelete(key);
     }
   };
 }
@@ -150,25 +150,35 @@ export function usePDelete<T>(key: string): () => void {
   const wb = React.useContext(WbContext);
   return () => {
     if (wb.connection) {
-      wb.connection.pDeleteAsync(key);
+      wb.connection.pDelete(key);
     }
   };
 }
 
-export function useSubscribe<T>(key: string, initialValue?: T): T | null {
+export function useSubscribe<T>(
+  key: string,
+  initialValue?: T,
+  unique?: boolean,
+  liveOnly?: boolean
+): T | null {
   const wb = React.useContext(WbContext);
   const [value, setValue] = React.useState<T | null>(
     initialValue === undefined ? null : initialValue
   );
   React.useEffect(() => {
     if (wb.connection) {
-      const sub = wb.connection.subscribe(key, ({ value }) => {
-        if (value !== undefined) {
-          setValue(value as T);
-        } else {
-          setValue(null);
-        }
-      });
+      const sub = wb.connection.subscribe(
+        key,
+        ({ value }) => {
+          if (value !== undefined) {
+            setValue(value as T);
+          } else {
+            setValue(null);
+          }
+        },
+        unique,
+        liveOnly
+      );
       return () => {
         if (wb.connection) {
           wb.connection.unsubscribe(sub);
@@ -181,7 +191,11 @@ export function useSubscribe<T>(key: string, initialValue?: T): T | null {
   return value;
 }
 
-export function usePSubscribe<T>(key: string) {
+export function usePSubscribe<T>(
+  key: string,
+  unique?: boolean,
+  liveOnly?: boolean
+) {
   const wb = React.useContext(WbContext);
   const [values, update] = React.useReducer(
     (
@@ -204,7 +218,7 @@ export function usePSubscribe<T>(key: string) {
   );
   React.useEffect(() => {
     if (wb.connection) {
-      const sub = wb.connection.pSubscribe(key, update);
+      const sub = wb.connection.pSubscribe(key, update, unique, liveOnly);
       return () => {
         if (wb.connection) {
           wb.connection.unsubscribe(sub);
@@ -262,7 +276,7 @@ export function useLsLater(): (
     consumer: (children: Children) => void
   ) => {
     if (wb.connection) {
-      wb.connection.lsAsync(parent, consumer);
+      wb.connection.ls(parent).then(consumer);
     }
   };
 }
@@ -273,7 +287,7 @@ export function useLs(
   const wb = React.useContext(WbContext);
   return (consumer: (children: Children) => void) => {
     if (wb.connection) {
-      wb.connection.lsAsync(parent, consumer);
+      wb.connection.ls(parent).then(consumer);
     }
   };
 }
