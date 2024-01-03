@@ -6,7 +6,7 @@ import {
   Children,
   Value,
 } from "worterbuch-js";
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 
 const WbContext = React.createContext<WB>({
   connection: undefined,
@@ -23,11 +23,13 @@ export type Config = {
   backendHost: string;
   backendPort: number | undefined;
   backendPath: string;
+  authtoken: string | undefined;
 };
 
 function useWorterbuch(
   address: string | undefined,
-  automaticReconnect: boolean
+  automaticReconnect: boolean,
+  authtoken?: string
 ): WB {
   const [conn, setConn] = React.useState<undefined | Worterbuch>();
   const [attempt, setAttempt] = React.useState(0);
@@ -35,7 +37,7 @@ function useWorterbuch(
   React.useEffect(() => {
     if (!conn && address && (attempt === 0 || automaticReconnect)) {
       console.log("Connecting to worterbuch server at", address);
-      wbconnect(address)
+      wbconnect(address, authtoken)
         .then((conn) => {
           conn.onclose = () => {
             console.error("Connection to worterbuch closed.");
@@ -82,8 +84,9 @@ export function Worterbuch({
   const address = config
     ? `${config.backendScheme}://${config.backendHost}${port}${config.backendPath}`
     : undefined;
+  const authToken = config.authtoken;
 
-  const wb = useWorterbuch(address, automaticReconnect || false);
+  const wb = useWorterbuch(address, automaticReconnect || false, authToken);
 
   return <WbContext.Provider value={wb}>{children}</WbContext.Provider>;
 }
@@ -289,4 +292,26 @@ export function useSubscribeLs(parent: string | undefined): Children {
     }
   }, [parent, wb.connection]);
   return children;
+}
+
+export function useLastWill(): Promise<KeyValuePairs | undefined> {
+  const wb = React.useContext(WbContext);
+  return wb.connection?.lastWill() || Promise.resolve(undefined);
+}
+
+export function useGraveGoods(
+  graveGoods: string[]
+): Promise<string[] | undefined> {
+  const wb = React.useContext(WbContext);
+  return wb.connection?.graveGoods() || Promise.resolve(undefined);
+}
+
+export function useSetLastWill(lastWill: KeyValuePairs) {
+  const wb = React.useContext(WbContext);
+  wb.connection?.setLastWill(lastWill);
+}
+
+export function useSetGraveGoods(graveGoods: string[]) {
+  const wb = React.useContext(WbContext);
+  wb.connection?.setGraveGoods(graveGoods);
 }
