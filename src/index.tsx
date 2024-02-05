@@ -102,7 +102,7 @@ export function useGetLater(): (
         wb.connection.get(key).then(consumer);
       }
     },
-    []
+    [wb.connection]
   );
 }
 
@@ -116,7 +116,7 @@ export function useGet<T>(
         wb.connection.get(key).then((val) => consumer(val as T));
       }
     },
-    [key]
+    [wb.connection, key]
   );
 }
 
@@ -131,7 +131,7 @@ export function useDeleteLater(): (
         wb.connection.delete(key).then(consumer);
       }
     },
-    []
+    [wb.connection]
   );
 }
 
@@ -145,17 +145,20 @@ export function useDelete<T>(
         wb.connection.delete(key).then((val) => consumer(val as T));
       }
     },
-    [key]
+    [wb.connection, key]
   );
 }
 
 export function usePDeleteLater(): (key: string) => void {
   const wb = React.useContext(WbContext);
-  return React.useCallback((key: string) => {
-    if (wb.connection) {
-      wb.connection.pDelete(key);
-    }
-  }, []);
+  return React.useCallback(
+    (key: string) => {
+      if (wb.connection) {
+        wb.connection.pDelete(key);
+      }
+    },
+    [wb.connection]
+  );
 }
 
 export function usePDelete<T>(key: string): () => void {
@@ -164,7 +167,7 @@ export function usePDelete<T>(key: string): () => void {
     if (wb.connection) {
       wb.connection.pDelete(key);
     }
-  }, [key]);
+  }, [wb.connection, key]);
 }
 
 export function useSubscribe<T>(
@@ -256,31 +259,37 @@ export function useWorterbuchConnected(): [boolean, string | undefined] {
 
 export function useSetLater() {
   const wb = React.useContext(WbContext);
-  return React.useCallback((key: string, value: Value) => {
-    return wb.connection?.set(key, value);
-  }, []);
+  return React.useCallback(
+    (key: string, value: Value) => {
+      return wb.connection?.set(key, value);
+    },
+    [wb.connection]
+  );
 }
 
 export function useSet(key: string) {
   const wb = React.useContext(WbContext);
   return React.useCallback(
     (value: Value) => wb.connection?.set(key, value),
-    [key]
+    [wb.connection, key]
   );
 }
 
 export function usePublishLater() {
   const wb = React.useContext(WbContext);
-  return React.useCallback((key: string, value: Value) => {
-    return wb.connection?.publish(key, value);
-  }, []);
+  return React.useCallback(
+    (key: string, value: Value) => {
+      return wb.connection?.publish(key, value);
+    },
+    [wb.connection]
+  );
 }
 
 export function usePublish(key: string) {
   const wb = React.useContext(WbContext);
   return React.useCallback(
     (value: Value) => wb.connection?.publish(key, value),
-    [key]
+    [wb.connection, key]
   );
 }
 
@@ -309,7 +318,7 @@ export function useLs(
         wb.connection.ls(parent).then(consumer);
       }
     },
-    [parent]
+    [wb.connection, parent]
   );
 }
 
@@ -350,7 +359,7 @@ export function useSetLastWillLater() {
   const wb = React.useContext(WbContext);
   return React.useCallback(
     (lastWill: KeyValuePairs) => wb.connection?.setLastWill(lastWill),
-    []
+    [wb.connection]
   );
 }
 
@@ -363,6 +372,6 @@ export function useSetGraveGoodsLater() {
   const wb = React.useContext(WbContext);
   return React.useCallback(
     (graveGoods: string[]) => wb.connection?.setGraveGoods(graveGoods),
-    []
+    [wb.connection]
   );
 }
