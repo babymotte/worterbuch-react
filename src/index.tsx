@@ -96,22 +96,28 @@ export function useGetLater(): (
   consumer: (value: Value | null) => void
 ) => void {
   const wb = React.useContext(WbContext);
-  return (key: string, consumer: (value: Value | null) => void) => {
-    if (wb.connection) {
-      wb.connection.get(key).then(consumer);
-    }
-  };
+  return React.useCallback(
+    (key: string, consumer: (value: Value | null) => void) => {
+      if (wb.connection) {
+        wb.connection.get(key).then(consumer);
+      }
+    },
+    []
+  );
 }
 
 export function useGet<T>(
   key: string
 ): (consumer: (value: T | null) => void) => void {
   const wb = React.useContext(WbContext);
-  return (consumer: (value: T | null) => void) => {
-    if (wb.connection) {
-      wb.connection.get(key).then((val) => consumer(val as T));
-    }
-  };
+  return React.useCallback(
+    (consumer: (value: T | null) => void) => {
+      if (wb.connection) {
+        wb.connection.get(key).then((val) => consumer(val as T));
+      }
+    },
+    [key]
+  );
 }
 
 export function useDeleteLater(): (
@@ -119,40 +125,46 @@ export function useDeleteLater(): (
   consumer?: (value: Value | null) => void
 ) => void {
   const wb = React.useContext(WbContext);
-  return (key: string, consumer?: (value: Value | null) => void) => {
-    if (wb.connection) {
-      wb.connection.delete(key).then(consumer);
-    }
-  };
+  return React.useCallback(
+    (key: string, consumer?: (value: Value | null) => void) => {
+      if (wb.connection) {
+        wb.connection.delete(key).then(consumer);
+      }
+    },
+    []
+  );
 }
 
 export function useDelete<T>(
   key: string
 ): (consumer: (value: T | null) => void) => void {
   const wb = React.useContext(WbContext);
-  return (consumer: (value: T | null) => void) => {
-    if (wb.connection) {
-      wb.connection.delete(key).then((val) => consumer(val as T));
-    }
-  };
+  return React.useCallback(
+    (consumer: (value: T | null) => void) => {
+      if (wb.connection) {
+        wb.connection.delete(key).then((val) => consumer(val as T));
+      }
+    },
+    [key]
+  );
 }
 
 export function usePDeleteLater(): (key: string) => void {
   const wb = React.useContext(WbContext);
-  return (key: string) => {
+  return React.useCallback((key: string) => {
     if (wb.connection) {
       wb.connection.pDelete(key);
     }
-  };
+  }, []);
 }
 
 export function usePDelete<T>(key: string): () => void {
   const wb = React.useContext(WbContext);
-  return () => {
+  return React.useCallback(() => {
     if (wb.connection) {
       wb.connection.pDelete(key);
     }
-  };
+  }, [key]);
 }
 
 export function useSubscribe<T>(
@@ -244,26 +256,32 @@ export function useWorterbuchConnected(): [boolean, string | undefined] {
 
 export function useSetLater() {
   const wb = React.useContext(WbContext);
-  return (key: string, value: Value) => {
+  return React.useCallback((key: string, value: Value) => {
     return wb.connection?.set(key, value);
-  };
+  }, []);
 }
 
 export function useSet(key: string) {
   const wb = React.useContext(WbContext);
-  return (value: Value) => wb.connection?.set(key, value);
+  return React.useCallback(
+    (value: Value) => wb.connection?.set(key, value),
+    [key]
+  );
 }
 
 export function usePublishLater() {
   const wb = React.useContext(WbContext);
-  return (key: string, value: Value) => {
+  return React.useCallback((key: string, value: Value) => {
     return wb.connection?.publish(key, value);
-  };
+  }, []);
 }
 
 export function usePublish(key: string) {
   const wb = React.useContext(WbContext);
-  return (value: Value) => wb.connection?.publish(key, value);
+  return React.useCallback(
+    (value: Value) => wb.connection?.publish(key, value),
+    [key]
+  );
 }
 
 export function useLsLater(): (
@@ -271,25 +289,28 @@ export function useLsLater(): (
   consumer: (children: Children) => void
 ) => void {
   const wb = React.useContext(WbContext);
-  return (
-    parent: string | undefined,
-    consumer: (children: Children) => void
-  ) => {
-    if (wb.connection) {
-      wb.connection.ls(parent).then(consumer);
-    }
-  };
+  return React.useCallback(
+    (parent: string | undefined, consumer: (children: Children) => void) => {
+      if (wb.connection) {
+        wb.connection.ls(parent).then(consumer);
+      }
+    },
+    []
+  );
 }
 
 export function useLs(
   parent: string | undefined
 ): (consumer: (children: Children) => void) => void {
   const wb = React.useContext(WbContext);
-  return (consumer: (children: Children) => void) => {
-    if (wb.connection) {
-      wb.connection.ls(parent).then(consumer);
-    }
-  };
+  return React.useCallback(
+    (consumer: (children: Children) => void) => {
+      if (wb.connection) {
+        wb.connection.ls(parent).then(consumer);
+      }
+    },
+    [parent]
+  );
 }
 
 export function useSubscribeLs(parent: string | undefined): Children {
@@ -325,7 +346,23 @@ export function useSetLastWill(lastWill: KeyValuePairs) {
   wb.connection?.setLastWill(lastWill);
 }
 
+export function useSetLastWillLater() {
+  const wb = React.useContext(WbContext);
+  return React.useCallback(
+    (lastWill: KeyValuePairs) => wb.connection?.setLastWill(lastWill),
+    []
+  );
+}
+
 export function useSetGraveGoods(graveGoods: string[]) {
   const wb = React.useContext(WbContext);
   wb.connection?.setGraveGoods(graveGoods);
+}
+
+export function useSetGraveGoodsLater() {
+  const wb = React.useContext(WbContext);
+  return React.useCallback(
+    (graveGoods: string[]) => wb.connection?.setGraveGoods(graveGoods),
+    []
+  );
 }
