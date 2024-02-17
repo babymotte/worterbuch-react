@@ -13,7 +13,7 @@
     "release": "npm run build && npm publish"
   },
   "author": "Michael Bachmann <mbachmann@bbmsoft.net>",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "dependencies": {
     "worterbuch-js": "^0.42.5"
   },
