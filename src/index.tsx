@@ -408,3 +408,9 @@ export function useSetGraveGoodsLater() {
     [wb.connection]
   );
 }
+
+export function useWbState<T>(key: string) {
+  const state = useSubscribe<T>(key);
+  const setState = useSet(key);
+  return [state, setState];
+}
