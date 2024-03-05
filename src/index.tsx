@@ -139,6 +139,20 @@ export function useGet<T>(
   );
 }
 
+export function useGetOnce<T>(key: string): T | null {
+  const wb = React.useContext(WbContext);
+  const [value, setValue] = React.useState<T | null>(null);
+  React.useEffect(() => {
+    if (wb.connection) {
+      wb.connection
+        .get(key)
+        .then((val) => setValue(val as T))
+        .catch(() => setValue(null));
+    }
+  }, [wb.connection, key]);
+  return value;
+}
+
 export function useDeleteLater(): (
   key: string,
   consumer?: (value: Value | null) => void
