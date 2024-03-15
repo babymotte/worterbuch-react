@@ -355,6 +355,17 @@ export function useLs(
   );
 }
 
+export function useLsOnce(parent: string | undefined): string[] {
+  const wb = React.useContext(WbContext);
+  const [children, setChildren] = React.useState<string[]>([]);
+  React.useEffect(() => {
+    if (wb.connection) {
+      wb.connection.ls(parent).then(setChildren);
+    }
+  }, [wb.connection, parent]);
+  return children;
+}
+
 export function useSubscribeLs(parent: string | undefined): Children {
   const wb = React.useContext(WbContext);
   const [children, setChildren] = React.useState<Children>([]);
@@ -409,8 +420,17 @@ export function useSetGraveGoodsLater() {
   );
 }
 
-export function useWbState<T>(key: string) {
-  const state = useSubscribe<T>(key);
+export function useWbState<T>(
+  key: string,
+  initialValue?: T,
+  unique?: boolean,
+  liveOnly?: boolean
+) {
+  const state = useSubscribe<T>(key, initialValue, unique, liveOnly);
   const setState = useSet(key);
   return [state, setState];
+}
+
+export function useRawWbClient() {
+  return React.useContext(WbContext).connection;
 }
