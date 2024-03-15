@@ -15,7 +15,7 @@
   "author": "Michael Bachmann <mbachmann@bbmsoft.net>",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
-    "worterbuch-js": "^0.42.5"
+    "worterbuch-js": "^0.43.0"
   },
   "devDependencies": {
     "typescript": "^4.9.3"
