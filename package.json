@@ -1,6 +1,6 @@
 {
   "name": "worterbuch-react",
-  "version": "0.43.0",
+  "version": "0.43.1",
   "description": "A worterbuch client library for React",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,7 +15,7 @@
   "author": "Michael Bachmann <mbachmann@bbmsoft.net>",
   "license": "Apache-2.0",
   "dependencies": {
-    "worterbuch-js": "^0.43.0"
+    "worterbuch-js": "^0.43.1"
   },
   "devDependencies": {
     "typescript": "^4.9.3"
