@@ -37,9 +37,9 @@ type WB = {
 export type Config = {
   backendScheme: string;
   backendHost: string;
-  backendPort: number | undefined;
+  backendPort?: number;
   backendPath: string;
-  backendAuthToken: string | undefined;
+  backendAuthToken?: string;
 };
 
 function useWorterbuch(
@@ -51,6 +51,13 @@ function useWorterbuch(
   const [conn, setConn] = React.useState<undefined | Worterbuch>();
   const [attempt, setAttempt] = React.useState(0);
 
+  const attemptReconnect = React.useCallback(() => {
+    if (automaticReconnect) {
+      console.log(`Trying to reconnect in 3 seconds …`);
+      setTimeout(() => setAttempt(attempt + 1), 3000);
+    }
+  }, [attempt]);
+
   React.useEffect(() => {
     if (!conn && address && (attempt === 0 || automaticReconnect)) {
       console.log("Connecting to worterbuch server at", address);
@@ -59,26 +66,24 @@ function useWorterbuch(
           conn.onclose = () => {
             console.error("Connection to worterbuch closed.");
             setConn(undefined);
-            attemptReconnect(automaticReconnect, setAttempt);
+            attemptReconnect();
           };
           setConn(conn);
         })
         .catch((e) => {
           console.error("Could not connect to server:", e);
-          attemptReconnect(automaticReconnect, setAttempt);
+          attemptReconnect();
         });
     }
-  }, [address, attempt, automaticReconnect]);
-
-  function attemptReconnect(
-    automaticReconnect: boolean,
-    setAttempt: (attempt: number) => void
-  ) {
-    if (automaticReconnect) {
-      console.log("Trying to reconnect in 3 seconds ...");
-      setTimeout(() => setAttempt(attempt + 1), 3000);
-    }
-  }
+  }, [
+    address,
+    attempt,
+    attemptReconnect,
+    authtoken,
+    automaticReconnect,
+    conn,
+    keepaliveTimeout,
+  ]);
 
   return {
     connection: conn,
@@ -199,7 +204,7 @@ export function usePDeleteLater(): (key: string) => void {
   );
 }
 
-export function usePDelete<T>(key: string): () => void {
+export function usePDelete(key: string): () => void {
   const wb = React.useContext(WbContext);
   return React.useCallback(() => {
     if (wb.connection) {
@@ -240,7 +245,7 @@ export function useSubscribe<T>(
     } else {
       setValue(null);
     }
-  }, [key, wb.connection]);
+  }, [key, liveOnly, unique, wb.connection]);
   return value;
 }
 
@@ -278,7 +283,7 @@ export function usePSubscribe<T>(
         }
       };
     }
-  }, [key, wb.connection]);
+  }, [key, liveOnly, unique, wb.connection]);
   return values;
 }
 
@@ -287,12 +292,8 @@ export function key(...segemnts: string[]): string {
 }
 
 export function useWorterbuchConnected(): [boolean, string | undefined] {
-  const [connected, setConnected] = React.useState<boolean>(false);
   const wb = React.useContext(WbContext);
-  React.useEffect(() => {
-    setConnected(wb.connection !== undefined && wb.connection !== null);
-  }, [wb.connection]);
-  return [connected, wb.address];
+  return [wb.connection !== undefined && wb.connection !== null, wb.address];
 }
 
 export function useSetLater() {
@@ -342,7 +343,7 @@ export function useLsLater(): (
         wb.connection.ls(parent).then(consumer);
       }
     },
-    []
+    [wb.connection]
   );
 }
 
@@ -392,9 +393,7 @@ export function useLastWill(): Promise<KeyValuePairs | undefined> {
   return wb.connection?.lastWill() || Promise.resolve(undefined);
 }
 
-export function useGraveGoods(
-  graveGoods: string[]
-): Promise<string[] | undefined> {
+export function useGraveGoods(): Promise<string[] | undefined> {
   const wb = React.useContext(WbContext);
   return wb.connection?.graveGoods() || Promise.resolve(undefined);
 }
