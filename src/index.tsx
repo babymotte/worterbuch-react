@@ -400,7 +400,9 @@ export function useGraveGoods(): Promise<string[] | undefined> {
 
 export function useSetLastWill(lastWill: KeyValuePairs) {
   const wb = React.useContext(WbContext);
-  wb.connection?.setLastWill(lastWill);
+  React.useEffect(() => {
+    wb.connection?.setLastWill(lastWill);
+  }, [wb.connection]);
 }
 
 export function useSetLastWillLater() {
@@ -413,7 +415,9 @@ export function useSetLastWillLater() {
 
 export function useSetClientName(clientName: string) {
   const wb = React.useContext(WbContext);
-  wb.connection?.setClientName(clientName);
+  React.useEffect(() => {
+    wb.connection?.setClientName(clientName);
+  }, [wb.connection]);
 }
 
 export function useSetClientNamelLater() {
@@ -426,7 +430,9 @@ export function useSetClientNamelLater() {
 
 export function useSetGraveGoods(graveGoods: string[]) {
   const wb = React.useContext(WbContext);
-  wb.connection?.setGraveGoods(graveGoods);
+  React.useEffect(() => {
+    wb.connection?.setGraveGoods(graveGoods);
+  }, [wb.connection]);
 }
 
 export function useSetGraveGoodsLater() {
