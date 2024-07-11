@@ -411,6 +411,19 @@ export function useSetLastWillLater() {
   );
 }
 
+export function useSetClientName(clientName: string) {
+  const wb = React.useContext(WbContext);
+  wb.connection?.setClientName(clientName);
+}
+
+export function useSetClientNamelLater() {
+  const wb = React.useContext(WbContext);
+  return React.useCallback(
+    (clientName: string) => wb.connection?.setClientName(clientName),
+    [wb.connection]
+  );
+}
+
 export function useSetGraveGoods(graveGoods: string[]) {
   const wb = React.useContext(WbContext);
   wb.connection?.setGraveGoods(graveGoods);
