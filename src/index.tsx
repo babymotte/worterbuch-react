@@ -361,6 +361,24 @@ export function useLsLater(): (
   );
 }
 
+export function usePLsLater(): (
+  parentPattern: string | undefined,
+  consumer: (children: Children) => void
+) => void {
+  const wb = React.useContext(WbContext);
+  return React.useCallback(
+    (
+      parentPattern: string | undefined,
+      consumer: (children: Children) => void
+    ) => {
+      if (wb.connection) {
+        wb.connection.pLs(parentPattern).then(consumer);
+      }
+    },
+    [wb.connection]
+  );
+}
+
 export function useLs(
   parent: string | undefined
 ): (consumer: (children: Children) => void) => void {
@@ -375,12 +393,37 @@ export function useLs(
   );
 }
 
+export function usePLs(
+  parentPattern: string | undefined
+): (consumer: (children: Children) => void) => void {
+  const wb = React.useContext(WbContext);
+  return React.useCallback(
+    (consumer: (children: Children) => void) => {
+      if (wb.connection) {
+        wb.connection.pLs(parentPattern).then(consumer);
+      }
+    },
+    [wb.connection, parent]
+  );
+}
+
 export function useLsOnce(parent: string | undefined): string[] {
   const wb = React.useContext(WbContext);
   const [children, setChildren] = React.useState<string[]>([]);
   React.useEffect(() => {
     if (wb.connection) {
       wb.connection.ls(parent).then(setChildren);
+    }
+  }, [wb.connection, parent]);
+  return children;
+}
+
+export function usePLsOnce(parentPattern: string | undefined): string[] {
+  const wb = React.useContext(WbContext);
+  const [children, setChildren] = React.useState<string[]>([]);
+  React.useEffect(() => {
+    if (wb.connection) {
+      wb.connection.pLs(parentPattern).then(setChildren);
     }
   }, [wb.connection, parent]);
   return children;
