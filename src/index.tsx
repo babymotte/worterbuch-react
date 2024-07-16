@@ -69,9 +69,6 @@ function useWorterbuch(
             setConn(undefined);
             attemptReconnect();
           };
-          if (clientName) {
-            conn.setClientName(clientName);
-          }
           setConn(conn);
         })
         .catch((e) => {
@@ -84,6 +81,7 @@ function useWorterbuch(
       if (conn) {
         console.log("Closing worterbuch connection.");
         conn.close();
+        setConn(undefined);
       }
     };
   }, [
@@ -95,6 +93,12 @@ function useWorterbuch(
     conn,
     keepaliveTimeout,
   ]);
+
+  React.useEffect(() => {
+    if (conn && clientName) {
+      conn.setClientName(clientName);
+    }
+  }, [conn, clientName]);
 
   return {
     connection: conn,
