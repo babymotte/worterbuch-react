@@ -46,7 +46,8 @@ function useWorterbuch(
   address: string | undefined,
   automaticReconnect: boolean,
   authtoken: string | undefined,
-  keepaliveTimeout: number | undefined
+  keepaliveTimeout: number | undefined,
+  clientName: string | undefined
 ): WB {
   const [conn, setConn] = React.useState<undefined | Worterbuch>();
   const [attempt, setAttempt] = React.useState(0);
@@ -68,6 +69,9 @@ function useWorterbuch(
             setConn(undefined);
             attemptReconnect();
           };
+          if (clientName) {
+            conn.setClientName(clientName);
+          }
           setConn(conn);
         })
         .catch((e) => {
@@ -75,6 +79,13 @@ function useWorterbuch(
           attemptReconnect();
         });
     }
+
+    return () => {
+      if (conn) {
+        console.log("Closing worterbuch connection.");
+        conn.close();
+      }
+    };
   }, [
     address,
     attempt,
@@ -96,6 +107,7 @@ export type WorterbuchProps = {
   config: Config;
   automaticReconnect?: boolean;
   keepaliveTimeout?: number;
+  clientName?: string;
 };
 
 export function Worterbuch({
@@ -103,6 +115,7 @@ export function Worterbuch({
   config,
   automaticReconnect,
   keepaliveTimeout,
+  clientName,
 }: WorterbuchProps) {
   const port = config.backendPort ? `:${config.backendPort}` : "";
   const address = config
@@ -114,7 +127,8 @@ export function Worterbuch({
     address,
     automaticReconnect || false,
     authToken,
-    keepaliveTimeout
+    keepaliveTimeout,
+    clientName
   );
 
   return <WbContext.Provider value={wb}>{children}</WbContext.Provider>;
