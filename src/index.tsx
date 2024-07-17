@@ -24,14 +24,32 @@ import {
 } from "worterbuch-js";
 import React from "react";
 
+export enum ConnectionState {
+  NoServerSelected = "NO_SERVER_SELECTED",
+  Connecting = "CONNECTING",
+  CouldNotConnect = "COULD_NOT_CONNECT",
+  Connected = "CONNECTED",
+  Disconnected = "DISCONNECTED",
+}
+
+export enum ConnectionStatus {
+  Warning = "WARNING",
+  Error = "ERROR",
+  Ok = "OK",
+}
+
 const WbContext = React.createContext<WB>({
   connection: undefined,
   address: undefined,
+  state: ConnectionState.Disconnected,
+  status: ConnectionStatus.Error,
 });
 
 type WB = {
   connection: Worterbuch | undefined;
   address: string | undefined;
+  state: ConnectionState;
+  status: ConnectionStatus;
 };
 
 export type Config = {
@@ -51,6 +69,13 @@ function useWorterbuch(
 ): WB {
   const [conn, setConn] = React.useState<undefined | Worterbuch>();
   const [attempt, setAttempt] = React.useState(0);
+  const [{ state, status }, setStatusSummary] = React.useState<{
+    state: ConnectionState;
+    status: ConnectionStatus;
+  }>({
+    state: ConnectionState.Disconnected,
+    status: ConnectionStatus.Error,
+  });
 
   const attemptReconnect = React.useCallback(() => {
     if (automaticReconnect) {
@@ -62,17 +87,33 @@ function useWorterbuch(
   React.useEffect(() => {
     if (!conn && address && (attempt === 0 || automaticReconnect)) {
       console.log("Connecting to worterbuch server at", address);
+      setStatusSummary({
+        state: ConnectionState.Connecting,
+        status: ConnectionStatus.Warning,
+      });
       wbconnect(address, authtoken, keepaliveTimeout)
         .then((conn) => {
           conn.onclose = () => {
             console.error("Connection to worterbuch closed.");
             setConn(undefined);
+            setStatusSummary({
+              state: ConnectionState.Disconnected,
+              status: ConnectionStatus.Error,
+            });
             attemptReconnect();
           };
           setConn(conn);
+          setStatusSummary({
+            state: ConnectionState.Connected,
+            status: ConnectionStatus.Ok,
+          });
         })
         .catch((e) => {
           console.error("Could not connect to server:", e);
+          setStatusSummary({
+            state: ConnectionState.CouldNotConnect,
+            status: ConnectionStatus.Error,
+          });
           attemptReconnect();
         });
     }
@@ -80,6 +121,10 @@ function useWorterbuch(
     return () => {
       if (conn) {
         console.log("Closing worterbuch connection.");
+        setStatusSummary({
+          state: ConnectionState.Disconnected,
+          status: ConnectionStatus.Error,
+        });
         conn.close();
         setConn(undefined);
       }
@@ -103,6 +148,8 @@ function useWorterbuch(
   return {
     connection: conn,
     address,
+    state,
+    status,
   };
 }
 
@@ -309,9 +356,19 @@ export function key(...segemnts: string[]): string {
   return segemnts.join("/");
 }
 
-export function useWorterbuchConnected(): [boolean, string | undefined] {
+export function useWorterbuchConnected(): [
+  boolean,
+  string | undefined,
+  ConnectionStatus,
+  ConnectionState
+] {
   const wb = React.useContext(WbContext);
-  return [wb.connection !== undefined && wb.connection !== null, wb.address];
+  return [
+    wb.connection !== undefined && wb.connection !== null,
+    wb.address,
+    wb.status,
+    wb.state,
+  ];
 }
 
 export function useSetLater() {
