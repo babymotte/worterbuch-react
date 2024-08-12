@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+
 import {
   connect as wbconnect,
   Worterbuch,
@@ -82,7 +84,7 @@ function useWorterbuch(
       console.log(`Trying to reconnect in 3 seconds …`);
       setTimeout(() => setAttempt(attempt + 1), 3000);
     }
-  }, [attempt]);
+  }, [attempt, automaticReconnect]);
 
   React.useEffect(() => {
     if (!conn && address && (attempt === 0 || automaticReconnect)) {
@@ -154,7 +156,7 @@ function useWorterbuch(
 }
 
 export type WorterbuchProps = {
-  children: any;
+  children: JSX.Element | JSX.Element[];
   config: Config;
   automaticReconnect?: boolean;
   keepaliveTimeout?: number;
@@ -185,119 +187,115 @@ export function Worterbuch({
   return <WbContext.Provider value={wb}>{children}</WbContext.Provider>;
 }
 
-export function useGetLater(): (
+export function useGetLater<T extends Value>(): (
   key: string,
-  consumer: (value: Value | null) => void
+  consumer: (value: T | undefined) => void
 ) => void {
   const wb = React.useContext(WbContext);
   return React.useCallback(
-    (key: string, consumer: (value: Value | null) => void) => {
+    (key: string, consumer: (value: T | undefined) => void) => {
       if (wb.connection) {
-        wb.connection.get(key).then(consumer);
+        wb.connection.get<T>(key).then(consumer);
       }
     },
     [wb.connection]
   );
 }
 
-export function useGet<T>(
+export function useGet<T extends Value>(
   key: string
-): (consumer: (value: T | null) => void) => void {
+): (consumer: (value: T | undefined) => void) => void {
   const wb = React.useContext(WbContext);
   return React.useCallback(
-    (consumer: (value: T | null) => void) => {
+    (consumer: (value: T | undefined) => void) => {
       if (wb.connection) {
-        wb.connection.get(key).then((val) => consumer(val as T));
+        wb.connection.get<T>(key).then((val) => consumer(val as T));
       }
     },
     [wb.connection, key]
   );
 }
 
-export function useGetOnce<T>(key: string): T | null {
+export function useGetOnce<T extends Value>(key: string): T | undefined {
   const wb = React.useContext(WbContext);
-  const [value, setValue] = React.useState<T | null>(null);
+  const [value, setValue] = React.useState<T | undefined>(undefined);
   React.useEffect(() => {
     if (wb.connection) {
       wb.connection
-        .get(key)
+        .get<T>(key)
         .then((val) => setValue(val as T))
-        .catch(() => setValue(null));
+        .catch(() => setValue(undefined));
     }
   }, [wb.connection, key]);
   return value;
 }
 
-export function useDeleteLater(): (
+export function useDeleteLater<T extends Value>(): (
   key: string,
-  consumer?: (value: Value | null) => void
+  consumer?: (value: T | undefined) => void
 ) => void {
   const wb = React.useContext(WbContext);
   return React.useCallback(
-    (key: string, consumer?: (value: Value | null) => void) => {
+    (key: string, consumer?: (value: T | undefined) => void) => {
       if (wb.connection) {
-        wb.connection.delete(key).then(consumer);
+        wb.connection.delete<T>(key).then(consumer);
       }
     },
     [wb.connection]
   );
 }
 
-export function useDelete<T>(
+export function useDelete<T extends Value>(
   key: string
-): (consumer: (value: T | null) => void) => void {
+): (consumer?: (value: T | undefined) => void) => void {
   const wb = React.useContext(WbContext);
   return React.useCallback(
-    (consumer: (value: T | null) => void) => {
+    (consumer?: (value: T | undefined) => void) => {
       if (wb.connection) {
-        wb.connection.delete(key).then((val) => consumer(val as T));
+        wb.connection.delete<T>(key).then((val) => {
+          if (consumer) consumer(val);
+        });
       }
     },
     [wb.connection, key]
   );
 }
 
-export function usePDeleteLater(): (key: string) => void {
+export function usePDeleteLater<T extends Value>(): (key: string) => void {
   const wb = React.useContext(WbContext);
   return React.useCallback(
     (key: string) => {
       if (wb.connection) {
-        wb.connection.pDelete(key);
+        wb.connection.pDelete<T>(key);
       }
     },
     [wb.connection]
   );
 }
 
-export function usePDelete(key: string): () => void {
+export function usePDelete<T extends Value>(key: string): () => void {
   const wb = React.useContext(WbContext);
   return React.useCallback(() => {
     if (wb.connection) {
-      wb.connection.pDelete(key);
+      wb.connection.pDelete<T>(key);
     }
   }, [wb.connection, key]);
 }
 
-export function useSubscribe<T>(
+export function useSubscribe<T extends Value>(
   key: string,
   initialValue?: T,
   unique?: boolean,
   liveOnly?: boolean
-): T | null {
+): T | undefined {
   const wb = React.useContext(WbContext);
-  const [value, setValue] = React.useState<T | null>(
-    initialValue === undefined ? null : initialValue
-  );
+  const [value, setValue] = React.useState<T | undefined>(initialValue);
   React.useEffect(() => {
     if (wb.connection) {
-      const sub = wb.connection.subscribe(
+      const sub = wb.connection.subscribe<T>(
         key,
         ({ value }) => {
-          if (value !== undefined) {
-            setValue(value as T);
-          } else {
-            setValue(null);
-          }
+          setValue(value);
         },
         unique,
         liveOnly
@@ -308,13 +306,13 @@ export function useSubscribe<T>(
         }
       };
     } else {
-      setValue(null);
+      setValue(undefined);
     }
   }, [key, liveOnly, unique, wb.connection]);
   return value;
 }
 
-export function usePSubscribe<T>(
+export function usePSubscribe<T extends Value>(
   key: string,
   unique?: boolean,
   liveOnly?: boolean
@@ -323,11 +321,11 @@ export function usePSubscribe<T>(
   const [values, update] = React.useReducer(
     (
       state: Map<Key, T>,
-      event: { keyValuePairs?: KeyValuePairs; deleted?: KeyValuePairs }
+      event: { keyValuePairs?: KeyValuePairs<T>; deleted?: KeyValuePairs<T> }
     ) => {
       if (event.keyValuePairs) {
         event.keyValuePairs.forEach((kvp) => {
-          state.set(kvp.key, kvp.value as T);
+          state.set(kvp.key, kvp.value);
         });
       }
       if (event.deleted) {
@@ -341,7 +339,7 @@ export function usePSubscribe<T>(
   );
   React.useEffect(() => {
     if (wb.connection) {
-      const sub = wb.connection.pSubscribe(key, update, unique, liveOnly);
+      const sub = wb.connection.pSubscribe<T>(key, update, unique, liveOnly);
       return () => {
         if (wb.connection) {
           wb.connection.unsubscribe(sub);
@@ -371,38 +369,38 @@ export function useWorterbuchConnected(): [
   ];
 }
 
-export function useSetLater() {
+export function useSetLater<T extends Value>() {
   const wb = React.useContext(WbContext);
   return React.useCallback(
-    (key: string, value: Value) => {
-      return wb.connection?.set(key, value);
+    (key: string, value: T) => {
+      return wb.connection?.set<T>(key, value);
     },
     [wb.connection]
   );
 }
 
-export function useSet(key: string) {
+export function useSet<T extends Value>(key: string) {
   const wb = React.useContext(WbContext);
   return React.useCallback(
-    (value: Value) => wb.connection?.set(key, value),
+    (value: T) => wb.connection?.set<T>(key, value),
     [wb.connection, key]
   );
 }
 
-export function usePublishLater() {
+export function usePublishLater<T extends Value>() {
   const wb = React.useContext(WbContext);
   return React.useCallback(
-    (key: string, value: Value) => {
-      return wb.connection?.publish(key, value);
+    (key: string, value: T) => {
+      return wb.connection?.publish<T>(key, value);
     },
     [wb.connection]
   );
 }
 
-export function usePublish(key: string) {
+export function usePublish<T extends Value>(key: string) {
   const wb = React.useContext(WbContext);
   return React.useCallback(
-    (value: Value) => wb.connection?.publish(key, value),
+    (value: T) => wb.connection?.publish<T>(key, value),
     [wb.connection, key]
   );
 }
@@ -464,7 +462,7 @@ export function usePLs(
         wb.connection.pLs(parentPattern).then(consumer);
       }
     },
-    [wb.connection, parent]
+    [wb.connection, parentPattern]
   );
 }
 
@@ -486,7 +484,7 @@ export function usePLsOnce(parentPattern: string | undefined): string[] {
     if (wb.connection) {
       wb.connection.pLs(parentPattern).then(setChildren);
     }
-  }, [wb.connection, parent]);
+  }, [wb.connection, parentPattern]);
   return children;
 }
 
@@ -506,9 +504,11 @@ export function useSubscribeLs(parent: string | undefined): Children {
   return children;
 }
 
-export function useLastWill(): Promise<KeyValuePairs | undefined> {
+export function useLastWill<T extends Value>(): Promise<
+  KeyValuePairs<T> | undefined
+> {
   const wb = React.useContext(WbContext);
-  return wb.connection?.lastWill() || Promise.resolve(undefined);
+  return wb.connection?.lastWill<T>() || Promise.resolve(undefined);
 }
 
 export function useGraveGoods(): Promise<string[] | undefined> {
@@ -516,17 +516,17 @@ export function useGraveGoods(): Promise<string[] | undefined> {
   return wb.connection?.graveGoods() || Promise.resolve(undefined);
 }
 
-export function useSetLastWill(lastWill: KeyValuePairs) {
+export function useSetLastWill<T extends Value>(lastWill: KeyValuePairs<T>) {
   const wb = React.useContext(WbContext);
   React.useEffect(() => {
-    wb.connection?.setLastWill(lastWill);
-  }, [wb.connection]);
+    wb.connection?.setLastWill<T>(lastWill);
+  }, [lastWill, wb.connection]);
 }
 
-export function useSetLastWillLater() {
+export function useSetLastWillLater<T extends Value>() {
   const wb = React.useContext(WbContext);
   return React.useCallback(
-    (lastWill: KeyValuePairs) => wb.connection?.setLastWill(lastWill),
+    (lastWill: KeyValuePairs<T>) => wb.connection?.setLastWill<T>(lastWill),
     [wb.connection]
   );
 }
@@ -535,7 +535,7 @@ export function useSetClientName(clientName: string) {
   const wb = React.useContext(WbContext);
   React.useEffect(() => {
     wb.connection?.setClientName(clientName);
-  }, [wb.connection]);
+  }, [clientName, wb.connection]);
 }
 
 export function useSetClientNamelLater() {
@@ -550,7 +550,7 @@ export function useSetGraveGoods(graveGoods: string[]) {
   const wb = React.useContext(WbContext);
   React.useEffect(() => {
     wb.connection?.setGraveGoods(graveGoods);
-  }, [wb.connection]);
+  }, [graveGoods, wb.connection]);
 }
 
 export function useSetGraveGoodsLater() {
@@ -561,17 +561,89 @@ export function useSetGraveGoodsLater() {
   );
 }
 
-export function useWbState<T>(
-  key: string,
-  initialValue?: T,
-  unique?: boolean,
-  liveOnly?: boolean
-) {
-  const state = useSubscribe<T>(key, initialValue, unique, liveOnly);
-  const setState = useSet(key);
+export function useWbState<T extends Value>(key: string, initialValue?: T) {
+  const wb = React.useContext(WbContext);
+  const [state, setState] = React.useState<T | undefined>(initialValue);
+  const stateRef = React.useRef<T | undefined>(state);
+  React.useEffect(() => {
+    if (state === undefined) {
+      wb.connection?.delete(key);
+    } else {
+      wb.connection?.set(key, state);
+    }
+    stateRef.current = state;
+  }, [key, state, wb.connection]);
+  React.useEffect(() => {
+    wb.connection?.subscribe<T>(key, ({ value }) => {
+      if (!deepEqual(value, stateRef.current)) {
+        if (value !== null) {
+          setState(value);
+        } else {
+          setState(undefined);
+        }
+      }
+    });
+  }, [key, wb.connection]);
+
   return [state, setState];
 }
 
 export function useRawWbClient() {
   return React.useContext(WbContext).connection;
+}
+
+export function useExpireCache(maxAge: number, interval?: number) {
+  const wb = React.useContext(WbContext);
+  wb.connection?.cached()?.expire(maxAge, interval);
+}
+
+export function useCachedGet<T extends Value>(
+  key: string
+): (consumer: (value: T | undefined) => void) => void {
+  const wb = React.useContext(WbContext);
+  return React.useCallback(
+    (consumer: (value: T | undefined) => void) => {
+      if (wb.connection) {
+        wb.connection
+          .cached()
+          .get(key)
+          .then((val) => consumer(val as T));
+      }
+    },
+    [wb.connection, key]
+  );
+}
+
+function deepEqual(obj1: Value | undefined, obj2: Value | undefined) {
+  // Base case: If both objects are identical, return true.
+  if (obj1 === obj2) {
+    return true;
+  }
+  // Check if both objects are objects and not null.
+  if (
+    typeof obj1 !== "object" ||
+    typeof obj2 !== "object" ||
+    obj1 == null ||
+    obj2 == null
+  ) {
+    return false;
+  }
+  // Get the keys of both objects.
+  const keys1 = Object.keys(obj1);
+  const keys2 = Object.keys(obj2);
+  // Check if the number of keys is the same.
+  if (keys1.length !== keys2.length) {
+    return false;
+  }
+  // Iterate through the keys and compare their values recursively.
+  for (const key of keys1) {
+    if (
+      !keys2.includes(key) ||
+      !deepEqual((obj1 as any)[key], (obj2 as any)[key])
+    ) {
+      return false;
+    }
+  }
+  // If all checks pass, the objects are deep equal.
+  return true;
 }

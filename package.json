@@ -1,6 +1,6 @@
 {
   "name": "worterbuch-react",
-  "version": "0.45.2",
+  "version": "0.45.3",
   "description": "A worterbuch client library for React",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,17 +10,26 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx tsc",
-    "release": "npm run build && npm publish"
+    "release": "npm run build && npm publish",
+    "lint": "npx eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
-  "author": "Michael Bachmann <mbachmann@bbmsoft.net>",
+  "author": {
+    "name": "Michael Bachmann",
+    "email": "mbachmann@bbmsoft.net"
+  },
   "license": "Apache-2.0",
   "dependencies": {
-    "worterbuch-js": "^0.45.1"
+    "worterbuch-js": "^0.45.6"
   },
   "devDependencies": {
     "react": "^17.0.0 || ^18.0.0",
     "@types/react": "^17.0.0 || ^18.0.0",
-    "typescript": "^4.9.3"
+    "@typescript-eslint/eslint-plugin": "^7.15.0",
+    "@typescript-eslint/parser": "^7.15.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.7",
+    "typescript": "^5.2.2"
   },
   "peerDependencies": {
     "react": "^17.0.0 || ^18.0.0"
