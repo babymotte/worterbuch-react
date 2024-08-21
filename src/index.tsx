@@ -25,8 +25,11 @@ import {
   Value,
   KeyValuePair,
   PStateEvent,
+  RequestPattern,
 } from "worterbuch-js";
 import React from "react";
+
+export { Value, Children } from "worterbuch-js";
 
 export enum ConnectionState {
   NoServerSelected = "NO_SERVER_SELECTED",
@@ -228,6 +231,51 @@ export function useGetOnce<T extends Value>(key: string): T | undefined {
     }
   }, [wb.connection, key]);
   return value;
+}
+
+export function usePGetLater<T extends Value>(): (
+  pattern: string
+) => Promise<KeyValuePairs<T> | undefined> {
+  const wb = React.useContext(WbContext);
+  return React.useCallback(
+    (pattern: RequestPattern) => {
+      if (wb.connection) {
+        return wb.connection.pGet<T>(pattern);
+      }
+      return Promise.resolve(undefined);
+    },
+    [wb.connection]
+  );
+}
+
+export function usePGet<T extends Value>(
+  pattern: RequestPattern
+): () => Promise<KeyValuePairs<T> | undefined> {
+  const wb = React.useContext(WbContext);
+  return React.useCallback(() => {
+    if (wb.connection) {
+      return wb.connection.pGet<T>(pattern);
+    }
+    return Promise.resolve(undefined);
+  }, [wb.connection, pattern]);
+}
+
+export function usePGetOnce<T extends Value>(
+  pattern: RequestPattern
+): KeyValuePairs<T> | undefined {
+  const wb = React.useContext(WbContext);
+  const [kvps, setKvps] = React.useState<KeyValuePairs<T> | undefined>(
+    undefined
+  );
+  React.useEffect(() => {
+    if (wb.connection) {
+      wb.connection
+        .pGet<T>(pattern)
+        .then((kvps) => setKvps(kvps))
+        .catch(() => setKvps(undefined));
+    }
+  }, [wb.connection, pattern]);
+  return kvps;
 }
 
 export function useDeleteLater<T extends Value>(): (
