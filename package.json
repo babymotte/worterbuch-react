@@ -1,6 +1,6 @@
 {
   "name": "worterbuch-react",
-  "version": "0.45.4",
+  "version": "0.46.0",
   "description": "A worterbuch client library for React",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,7 +19,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "worterbuch-js": "^0.45.9"
+    "worterbuch-js": "^0.46.0"
   },
   "devDependencies": {
     "react": "^17.0.0 || ^18.0.0",
