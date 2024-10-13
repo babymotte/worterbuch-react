@@ -26,6 +26,7 @@ import {
   KeyValuePair,
   PStateEvent,
   RequestPattern,
+  TransactionID,
 } from "worterbuch-js";
 import React from "react";
 
@@ -50,6 +51,7 @@ const WbContext = React.createContext<WB>({
   address: undefined,
   state: ConnectionState.Disconnected,
   status: ConnectionStatus.Error,
+  publishStreams: new Map(),
 });
 
 type WB = {
@@ -57,6 +59,7 @@ type WB = {
   address: string | undefined;
   state: ConnectionState;
   status: ConnectionStatus;
+  publishStreams: Map<string, TransactionID>;
 };
 
 export type Config = {
@@ -83,6 +86,8 @@ function useWorterbuch(
     status: ConnectionStatus.Error,
   });
 
+  const pubSRef = React.useRef(new Map());
+
   const attemptReconnect = React.useCallback(() => {
     if (automaticReconnect) {
       console.log(`Trying to reconnect in 3 seconds …`);
@@ -97,6 +102,7 @@ function useWorterbuch(
         state: ConnectionState.Connecting,
         status: ConnectionStatus.Warning,
       });
+      pubSRef.current.clear();
       wbconnect(address, authtoken)
         .then((conn) => {
           conn.onclose = () => {
@@ -148,6 +154,7 @@ function useWorterbuch(
     address,
     state,
     status,
+    publishStreams: pubSRef.current,
   };
 }
 
@@ -205,6 +212,35 @@ export function useGet<T extends Value>(
     }
     return Promise.resolve(undefined);
   }, [wb.connection, key]);
+}
+
+export function useSPubInit(key: string) {
+  const wb = React.useContext(WbContext);
+  if (!wb.publishStreams.has(key)) {
+    wb.connection?.sPubInit(key).then((tid) => {
+      wb.publishStreams.set(key, tid);
+    });
+  }
+}
+
+export function useSPub(key: string): (value: Value) => void {
+  const wb = React.useContext(WbContext);
+  const tid = wb.publishStreams.get(key);
+  return (value: Value) => {
+    if (tid != null) {
+      wb.connection?.sPub(tid, value);
+    }
+  };
+}
+
+export function useSPubLater(): (key: string, value: Value) => void {
+  const wb = React.useContext(WbContext);
+  return (key: string, value: Value) => {
+    const tid = wb.publishStreams.get(key);
+    if (tid != null) {
+      wb.connection?.sPub(tid, value);
+    }
+  };
 }
 
 export function useGetOnce<T extends Value>(key: string): T | undefined {
