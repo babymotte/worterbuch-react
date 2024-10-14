@@ -388,40 +388,54 @@ export function useSubscribe<T extends Value>(
   return value;
 }
 
+type PSubState<T> = {
+  values: Map<Key, T>;
+  pattern: string;
+};
+
 export function usePSubscribe<T extends Value>(
-  key: string,
+  pattern: string,
   unique?: boolean,
   liveOnly?: boolean
 ) {
   const wb = React.useContext(WbContext);
-  const [values, update] = React.useReducer(
-    (state: Map<Key, T>, event: PStateEvent<T>) => {
-      if (event.keyValuePairs) {
-        event.keyValuePairs.forEach((kvp) => {
-          state.set(kvp.key, kvp.value);
+  const [state, update] = React.useReducer(
+    (state: PSubState<T>, event: [string, PStateEvent<T>]) => {
+      if (event[0] !== state.pattern) {
+        state.values.clear();
+        state.pattern = event[0];
+      }
+      if (event[1].keyValuePairs) {
+        event[1].keyValuePairs.forEach((kvp) => {
+          state.values.set(kvp.key, kvp.value);
         });
       }
-      if (event.deleted) {
-        event.deleted.forEach((kvp) => {
-          state.delete(kvp.key);
+      if (event[1].deleted) {
+        event[1].deleted.forEach((kvp) => {
+          state.values.delete(kvp.key);
         });
       }
-      return new Map(state);
+      return { ...state };
     },
-    new Map()
+    { values: new Map(), pattern: "" }
   );
   React.useEffect(() => {
     const conn = wb.connection;
     if (conn) {
-      const sub = conn.pSubscribe<T>(key, update, unique, liveOnly);
+      const sub = conn.pSubscribe<T>(
+        pattern,
+        (e) => update([pattern, e]),
+        unique,
+        liveOnly
+      );
       return () => {
         if (conn) {
           conn.unsubscribe(sub);
         }
       };
     }
-  }, [key, liveOnly, unique, wb.connection]);
-  return values;
+  }, [pattern, liveOnly, unique, wb.connection]);
+  return state.values;
 }
 
 export function key(...segemnts: string[]): string {
