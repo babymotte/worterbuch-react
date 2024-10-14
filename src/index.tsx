@@ -30,7 +30,7 @@ import {
 } from "worterbuch-js";
 import React from "react";
 
-export { Value, Children } from "worterbuch-js";
+export { Value, ValueObject, Children } from "worterbuch-js";
 
 export enum ConnectionState {
   NoServerSelected = "NO_SERVER_SELECTED",
