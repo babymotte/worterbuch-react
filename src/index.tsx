@@ -86,9 +86,13 @@ function useWorterbuch(
 
   const pubSRef = React.useRef(new Map());
 
-  const address = config.backendAddress.map(
-    ([host, port]) =>
-      `${config.backendScheme}://${host}:${port || 80}${config.backendPath}`
+  const address = React.useMemo(
+    () =>
+      config.backendAddress.map(
+        ([host, port]) =>
+          `${config.backendScheme}://${host}:${port || 80}${config.backendPath}`
+      ),
+    [config.backendAddress, config.backendPath, config.backendScheme]
   );
   const authtoken = config.backendAuthToken;
 
