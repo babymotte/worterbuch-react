@@ -64,16 +64,14 @@ type WB = {
 
 export type Config = {
   backendScheme: string;
-  backendHost: string;
-  backendPort?: number;
+  backendAddress: [string, number?][];
   backendPath: string;
   backendAuthToken?: string;
 };
 
 function useWorterbuch(
-  address: string | undefined,
+  config: Config,
   automaticReconnect: boolean,
-  authtoken: string | undefined,
   clientName: string | undefined
 ): WB {
   const [conn, setConn] = React.useState<undefined | Worterbuch>();
@@ -87,6 +85,12 @@ function useWorterbuch(
   });
 
   const pubSRef = React.useRef(new Map());
+
+  const address = config.backendAddress.map(
+    ([host, port]) =>
+      `${config.backendScheme}://${host}:${port || 80}${config.backendPath}`
+  );
+  const authtoken = config.backendAuthToken;
 
   const attemptReconnect = React.useCallback(() => {
     if (automaticReconnect) {
@@ -151,7 +155,7 @@ function useWorterbuch(
 
   return {
     connection: conn,
-    address,
+    address: conn?.serverAddress,
     state,
     status,
     publishStreams: pubSRef.current,
@@ -171,18 +175,7 @@ export function Worterbuch({
   automaticReconnect,
   clientName,
 }: WorterbuchProps) {
-  const port = config.backendPort ? `:${config.backendPort}` : "";
-  const address = config
-    ? `${config.backendScheme}://${config.backendHost}${port}${config.backendPath}`
-    : undefined;
-  const authToken = config.backendAuthToken;
-
-  const wb = useWorterbuch(
-    address,
-    automaticReconnect || false,
-    authToken,
-    clientName
-  );
+  const wb = useWorterbuch(config, automaticReconnect || false, clientName);
 
   return <WbContext.Provider value={wb}>{children}</WbContext.Provider>;
 }

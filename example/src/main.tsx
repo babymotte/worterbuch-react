@@ -7,10 +7,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Worterbuch
       config={{
-        backendHost: "localhost",
+        backendAddress: [["localhost", 8080]],
         backendPath: "/ws",
         backendScheme: "ws",
-        backendPort: 8080,
       }}
       automaticReconnect
       clientName="worterbuch-react demo"
