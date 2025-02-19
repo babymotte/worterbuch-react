@@ -105,14 +105,16 @@ function useWorterbuch(
 
   React.useEffect(() => {
     if (!conn && address && (attempt === 0 || automaticReconnect)) {
-      console.log("Connecting to worterbuch server at", address);
+      const addrs = sortAddresses([...address]);
+      console.log("Connecting to worterbuch server at", addrs);
       setStatusSummary({
         state: ConnectionState.Connecting,
         status: ConnectionStatus.Warning,
       });
       pubSRef.current.clear();
-      wbconnect(address, authtoken)
+      wbconnect(addrs, authtoken)
         .then((conn) => {
+          storeConnectedAddress(conn.serverAddress);
           conn.onclose = () => {
             console.error("Connection to worterbuch closed.");
             setConn(undefined);
@@ -768,4 +770,39 @@ export function useCachedSubscribe<T extends Value>(
     }
   }, [key, wb.connection]);
   return value;
+}
+
+function storeConnectedAddress(address?: string) {
+  if (!address) {
+    return;
+  }
+
+  const localStorage = window?.localStorage;
+
+  if (!localStorage) {
+    return;
+  }
+
+  localStorage.setItem("worterbuch.react.connected.server", address);
+}
+
+function sortAddresses(addresses: string[]): string[] {
+  const localStorage = window?.localStorage;
+
+  if (!localStorage) {
+    return addresses;
+  }
+
+  const lastConnected = localStorage.getItem(
+    "worterbuch.react.connected.server"
+  );
+  if (!lastConnected) {
+    return addresses;
+  }
+
+  addresses.sort((a, b) =>
+    a === lastConnected ? -1 : b === lastConnected ? 1 : 0
+  );
+
+  return addresses;
 }
